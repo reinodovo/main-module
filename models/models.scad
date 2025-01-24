@@ -1,4 +1,4 @@
-use <../../ktne_3d_models/bomb_base.scad>;
+use <../../ktne-3d-models/bomb_base.scad>;
 
 $fn = $preview ? 50 : 100;
 
