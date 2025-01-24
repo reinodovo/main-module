@@ -26,14 +26,15 @@ unsigned long BUZZER_DELAYS[MainModule::SPEED_STAGES] = {700, 600, 400, 150};
 std::queue<BuzzerEvent> buzzerQueue;
 int buzzerPin;
 
-void start(int pin) {
-  buzzerPin = pin;
-  buzzerQueue.push({millis(), 70, BuzzerFrequency::Second});
-}
-
 void clear() {
   while (!buzzerQueue.empty())
     buzzerQueue.pop();
+}
+
+void start(int pin) {
+  clear();
+  buzzerPin = pin;
+  buzzerQueue.push({millis(), 70, BuzzerFrequency::Second});
 }
 
 void playStrike() {
@@ -50,7 +51,7 @@ void playFail() {
 void update() {
   if (buzzerQueue.empty())
     return;
-  if (MainModule::solved())
+  if (MainModule::solved() || !MainModule::started())
     return;
   BuzzerEvent event = buzzerQueue.front();
   unsigned long currentTime = millis();

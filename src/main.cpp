@@ -14,6 +14,8 @@ struct Settings {
   int maxStrikes;
 } settings;
 
+const int START_COUNTDOWN_SECONDS = 3;
+
 const int BUZZER_PIN = 21;
 
 const int TIMER_DIGITS = 4;
@@ -29,8 +31,10 @@ void handleChangeButton(ButtonState, ButtonState);
 void updateSettings();
 void recallSettings();
 
+bool can_start;
+
 void setup() {
-  if (!MainModule::init())
+  if (!MainModule::setup())
     ESP.restart();
 
   EEPROM.begin(sizeof(Settings));
@@ -43,9 +47,16 @@ void setup() {
 
   Timer::setup();
   Strikes::setup();
-}
 
-int strikes = 0;
+  MainModule::onFailed = []() { Buzzer::playFail(); };
+  MainModule::onStrike = [](int strikes) {
+    if (MainModule::failed())
+      return;
+    Buzzer::playStrike();
+  };
+
+  can_start = true;
+}
 
 void recallSettings() {
   EEPROM.get(0, settings);
@@ -67,21 +78,41 @@ void updateSettings() {
   MainModule::setMaxStrikes(settings.maxStrikes);
 }
 
-void tryStart() {
-  if (selectButton.state() == ButtonState::Held &&
-      changeButton.state() == ButtonState::Held) {
-    Timer::showingCode = false;
-    Timer::selectedDigit = -1;
-    MainModule::start();
-    Buzzer::start(BUZZER_PIN);
-  }
+bool buttonsEnabled() {
+  bool started = MainModule::started() || MainModule::starting();
+  bool finished = MainModule::solved() || MainModule::failed();
+  return !started || finished;
+}
+
+bool bothButtonsHeld() {
+  return selectButton.state() == ButtonState::Held &&
+         changeButton.state() == ButtonState::Held;
+}
+
+void reset() {
+  can_start = false;
+  MainModule::reset();
+  Timer::showingCode = false;
+  Timer::selectedDigit = 0;
+  Strikes::setSelected(false);
+  recallSettings();
+}
+
+void start() {
+  if (!can_start)
+    return;
+  Timer::showingCode = false;
+  Timer::selectedDigit = -1;
+  Strikes::setSelected(false);
+  MainModule::startAfter(START_COUNTDOWN_SECONDS);
+  Buzzer::start(BUZZER_PIN);
 }
 
 void handleSelectButton(ButtonState state, ButtonState last) {
-  if (state == ButtonState::Held) {
+  if (!buttonsEnabled())
+    return;
+  if (state == ButtonState::Held)
     Timer::showingCode = true;
-    Timer::selectedDigit--;
-  }
   if (state == ButtonState::Released)
     Timer::showingCode = false;
   if (state == ButtonState::Released && last == ButtonState::Pressed)
@@ -90,6 +121,8 @@ void handleSelectButton(ButtonState state, ButtonState last) {
 }
 
 void handleChangeButton(ButtonState state, ButtonState last) {
+  if (!buttonsEnabled())
+    return;
   if (state != ButtonState::Released || last != ButtonState::Pressed)
     return;
   if (Timer::selectedDigit == TIMER_DIGITS) {
@@ -106,19 +139,16 @@ void handleChangeButton(ButtonState state, ButtonState last) {
 }
 
 void loop() {
-  if (!MainModule::started()) {
-    selectButton.update();
-    changeButton.update();
-    tryStart();
-  }
+  selectButton.update();
+  changeButton.update();
+  if (bothButtonsHeld() && buttonsEnabled()) {
+    if (MainModule::solved() || MainModule::failed())
+      reset();
+    else
+      start();
+  } else
+    can_start = true;
   Buzzer::update();
   MainModule::update();
   Display::update();
-  if (MainModule::strikes() != strikes) {
-    strikes = MainModule::strikes();
-    if (MainModule::failed())
-      Buzzer::playFail();
-    else
-      Buzzer::playStrike();
-  }
 }

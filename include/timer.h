@@ -64,7 +64,11 @@ void update() {
   int digit = (now / DELAY) % TIMER_DIGITS;
   int lastDigit = (digit - 1 + TIMER_DIGITS) % TIMER_DIGITS;
   digitalWrite(TIMER_DIGIT_PINS[lastDigit], LOW);
-  char *time = MainModule::timeStr();
+  char *time;
+  if (MainModule::onStartCountdown())
+    time = MainModule::timeStrToStart();
+  else
+    time = MainModule::timeStr(selectedDigit == -1);
   int value = get_value(digit, time);
   bool dot = has_dot(digit, time);
   delete time;
