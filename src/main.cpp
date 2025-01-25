@@ -10,9 +10,12 @@
 #include <timer.h>
 
 struct Settings {
+  int validationCode;
   unsigned long duration;
   int maxStrikes;
 } settings;
+
+int VALIDATION_CODE = 0x1234;
 
 const int START_COUNTDOWN_SECONDS = 3;
 
@@ -58,24 +61,32 @@ void setup() {
   can_start = true;
 }
 
+void applySettings() {
+  MainModule::setDuration(settings.duration);
+  MainModule::setMaxStrikes(settings.maxStrikes);
+}
+
 void recallSettings() {
   EEPROM.get(0, settings);
+  if (settings.validationCode != VALIDATION_CODE) {
+    updateSettings();
+  }
   unsigned long duration = settings.duration;
   for (int i = 0; i < TIMER_DIGITS; i++) {
     digits[i] = (duration / DIGIT_DURATIONS[i]);
     duration %= DIGIT_DURATIONS[i];
   }
-  updateSettings();
+  applySettings();
 }
 
 void updateSettings() {
+  settings.validationCode = VALIDATION_CODE;
   settings.duration = 0;
   for (int i = 0; i < TIMER_DIGITS; i++)
     settings.duration += digits[i] * DIGIT_DURATIONS[i];
   EEPROM.put(0, settings);
   EEPROM.commit();
-  MainModule::setDuration(settings.duration);
-  MainModule::setMaxStrikes(settings.maxStrikes);
+  applySettings();
 }
 
 bool buttonsEnabled() {
