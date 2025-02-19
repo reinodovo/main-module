@@ -31,6 +31,10 @@ module main_module() {
     }
 }
 
+module main_module_bottom() {
+    bomb_module_bottom(height_above_pcb = 10.5 - detail_height);
+}
+
 module strike_border_detail() {
     difference() {
         union() {
@@ -90,19 +94,11 @@ module speaker_detail() {
 }
 
 module button() {
-    union() {
-        minkowski() {
-            cylinder(7 - detail_corner_radius, button_radius - detail_corner_radius, button_radius - detail_corner_radius);
-            difference() {
-                sphere(detail_corner_radius);
-                translate([0, 0, -detail_corner_radius]) cube([2 * detail_corner_radius, 2 * detail_corner_radius, 2 * detail_corner_radius], center = true);
-            }
-        }
-        cylinder(button_height - button_height_above_top - wall_thickness, button_radius + wall_thickness, button_radius + wall_thickness);
-    }
+    cylinder_button(2, 5, button_radius - detail_tolerance, 1, detail_corner_radius);
 }
 
 color("darkgray") main_module();
+color("darkgray") main_module_bottom();
 color("black") translate([45, 71.5, -wall_thickness]) strike_border_detail();
 color("black") translate([45, 42.5, -wall_thickness]) timer_border_detail();
 color("black") translate([90 - 18.5, 90 - 18.5, -wall_thickness]) speaker_detail();
