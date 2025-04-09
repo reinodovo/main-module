@@ -94,7 +94,7 @@ module speaker_detail() {
 }
 
 module button() {
-    cylinder_button(2, 5, button_radius - detail_tolerance, 1, detail_corner_radius);
+    cylinder_button(2, 5, button_radius - detail_tolerance / 2, 1, detail_corner_radius);
 }
 
 color("darkgray") main_module();
